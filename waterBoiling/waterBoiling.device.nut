@@ -49,9 +49,12 @@ function initialize() {
 
 function readAndLogTempAndHumidity() {
     tempHumidSensor.read(function(data) {
-        //server.log("data:" + data);
-        server.log("data.temperature: " + data.temperature);
-        server.log("data.humidity: " + data.humidity);
+        server.log("temperature: " + data.temperature);
+        server.log("humidity: " + data.humidity);
+
+        agent.send("temperatureAndHumidity", {  "temperature": data.temperature,
+                                                "humidity": data.humidity
+        } );
 
         if(data.humidity >= HUMIDITY_TRESHOLD) {
             notify(data.humidity);
