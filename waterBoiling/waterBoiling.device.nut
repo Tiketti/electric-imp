@@ -14,16 +14,12 @@ const POLLING_INTERVAL = 30;
 // timestamp of last notification
 notification_sent <- 0;
 
-hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
-tempHumidSensor <- Si702x(hardware.i2c89);
-
 function initialize() {
-    // just local variables, aren't needed at the moment
-
     local pressureInterrupt = hardware.pin1;
     server.log("pressureInterrupt: " + pressureInterrupt);
 
-    local led = hardware.pin2;
+    led <- hardware.pin2;
+    led.configure(DIGITAL_OUT, 0);
     server.log("led: " + led);
 
     local lightInput = hardware.pin5;
@@ -40,7 +36,10 @@ function initialize() {
     local i2cSda = hardware.pin9;
     server.log("i2cSda: " + i2cSda);
 
-    local lightSensor = APDS9007(lightInput, 47000, lightEnable);
+    hardware.i2c89.configure(CLOCK_SPEED_400_KHZ);
+    tempHumidSensor <- Si702x(hardware.i2c89);
+
+    lightSensor <- APDS9007(lightInput, 47000, lightEnable);
     local pressureSensor = LPS25H(hardware.i2c89);
 
     server.log("pressureSensor instance: " + pressureSensor);
@@ -49,16 +48,24 @@ function initialize() {
 
 function readAndLogTempAndHumidity() {
     tempHumidSensor.read(function(data) {
-        server.log("temperature: " + data.temperature);
-        server.log("humidity: " + data.humidity);
+        local temperature = format("%0.1f", data.temperature);
+        local humidity = format("%0.1f", data.humidity);
+        local luxVal = format("%0.1f", lightSensor.read());
 
-        agent.send("temperatureAndHumidity", {  "temperature": data.temperature,
-                                                "humidity": data.humidity
+        server.log("temperature: " + temperature);
+        server.log("humidity: " + humidity);
+        server.log("light level (lux):" +  luxVal);
+
+        agent.send("lightTempHumidity", {  "temperature": temperature,
+                                            "humidity": humidity,
+                                            "light": luxVal
         } );
 
         if(data.humidity >= HUMIDITY_TRESHOLD) {
-            notify(data.humidity);
+            notify(humidity);
         }
+
+        flashLed();
     });
     imp.wakeup(POLLING_INTERVAL, readAndLogTempAndHumidity);
 }
@@ -75,6 +82,17 @@ function notify(humidity) {
     }
 }
 
+function flashLed() {
+    // Turn the LED on (write a HIGH value)
+    led.write(1);
+
+    // Pause for half a second
+    imp.sleep(1);
+
+    // Turn the LED off
+    led.write(0);
+}
+
 initialize();
-server.log("*** Polling every " + POLLING_INTERVAL + " seconds ***");
+server.log(format("\n*** Polling every " + POLLING_INTERVAL + " seconds ***"));
 readAndLogTempAndHumidity();

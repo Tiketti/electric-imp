@@ -21,11 +21,11 @@ function sendIfttNotification(data) {
 }
 
 function sendToDweet(data) {
-    dweetClient.dweet(DWEET_THING_NAME, { "temperature" : data.temperature, "humidity" : data.humidity },
+    dweetClient.dweet(DWEET_THING_NAME, { "temperature" : data.temperature, "humidity" : data.humidity, "light": data.light },
     function(response) {
         server.log("Dweet responded [" + response.statuscode + "] " + response.body);
     });
 }
 
 device.on("water_boiling", sendIfttNotification);
-device.on("temperatureAndHumidity", sendToDweet);
+device.on("lightTempHumidity", sendToDweet);
