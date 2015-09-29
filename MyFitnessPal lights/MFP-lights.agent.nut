@@ -3,15 +3,13 @@ const POLLING_INTERVAL = 20;
 const DWEET_THING_NAME = "mfpconsumedandgoal";
 dweetClient <- DweetIO();
 
-// okay, something is very off and division doesn't behave as expected.
-// therefore, this funky, despicabe workaround
-function getLightAmount(consumed) {
+function getLightAmount(percentage) {
     local ret = 0;
-    if(consumed < 500) ret = 1;
-    else if (consumed < 900) ret = 2;
-    else if (consumed < 1400) ret = 3;
-    else if (consumed < 1700) ret = 4;
-    else if (consumed >= 2100) ret = 5;
+    if(percentage < 20) ret = 1;
+    else if (percentage < 40) ret = 2;
+    else if (percentage < 60) ret = 3;
+    else if (percentage < 80) ret = 4;
+    else if (percentage >= 80) ret = 5;
 
     return ret;
 }
@@ -36,12 +34,17 @@ function poll() {
     getLatest(function (data){
         local consumed = data.content["consumed"].tointeger();
         local goal = data.content["goal"].tointeger();
-        local percentage = format("%.1f", (casti2f(consumed) / casti2f(goal)) * 100);
-        server.log("latest consumed: " + consumed);
-        server.log("latest goal: " + goal);
+        local burned = data.content["burned"].tointeger();
+        local adjustedGoal = goal + burned;
+        local percentage = format("%.1f", (casti2f(consumed) / casti2f(adjustedGoal)) * 100);
+
+        server.log("consumed: " + consumed);
+        server.log("goal: " + goal);
+        server.log("burned: " + burned);
+        server.log("adjusted goal: " + adjustedGoal);
         server.log("percentage: " + percentage);
 
-        local lightAmount = getLightAmount(data.content["consumed"]);
+        local lightAmount = getLightAmount(percentage.tointeger());
 
         imp.wakeup(1, function() {
             device.send("updateData", lightAmount);
@@ -52,7 +55,6 @@ function poll() {
 }
 
 poll();
-
 
 /*
 dweetClient.stream(DWEET_THING_NAME, function(thing) {
